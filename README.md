@@ -13,7 +13,7 @@
 ---
 
 # 🖥️ ii's Quest Menu
-**ii's Quest Menu** is a port of [ii's Stupid Menu](https://github.com/iiDk-the-actual/iis.Stupid.Menu) to Frida, letting it run on Quest 3-3s headsets.
+**ii's Quest Menu** is a port of [ii's Stupid Menu](https://github.com/iiDk-the-actual/iis.Stupid.Menu) to Frida, letting it run on Quest 3-3S headsets.
 This mod utilizes a modified version of **[vfsfitvnm/frida-il2cpp-bridge](https://github.com/vfsfitvnm/frida-il2cpp-bridge)** to communicate with **Gorilla Tag**.
 You may use this mod for any purposes you desire **as long as it falls under the MIT license**. Feel free to modify it, add or remove mods, or even [port it to other games](https://drive.iidk.online/funny/steal%20a%20brainrot.mp4).
 
