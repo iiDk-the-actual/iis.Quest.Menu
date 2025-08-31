@@ -1,7 +1,7 @@
 # ii's Quest Menu
 ii's Quest Menu is a port of [ii's Stupid Menu](https://github.com/iiDk-the-actual/iis.Stupid.Menu) to Frida, letting it run on Quest 3-3s headsets.
 
-## How to Use
+## How to Use ([Video Tutorial](https://www.youtube.com/watch?v=YhiYD-SWrOo))
 1. Run [root exploit](https://drive.iidk.online/src/Quest3-Root)
 2. Run the Frida server `./data/local/tmp/frida-server` & (If doing on standalone only, Termux > "su", "cd", the command)
 3. `adb tcpip 5000`
