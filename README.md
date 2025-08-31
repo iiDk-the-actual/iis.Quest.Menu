@@ -2,6 +2,16 @@
   <a href="#"><img src="https://i.imgur.com/HtO7VKw.png"></a>
 </p>
 
+---
+
+<p align="center">
+	<a href="https://github.com/iiDk-the-actual/iis.Quest.Menu/releases"><img src="https://img.shields.io/github/v/release/iiDk-the-actual/iis.Quest.Menu?label=version&style=for-the-badge"></a>
+	<a href="https://github.com/iiDk-the-actual/iis.Quest.Menu/releases/latest"><img src="https://img.shields.io/github/downloads/iiDk-the-actual/iis.Quest.Menu/latest?style=for-the-badge"></a>
+	<a href="https://discord.gg/iidk"><img src="https://img.shields.io/discord/1170093288557129748?label=discord&style=for-the-badge&color=blueviolet"></a>
+</p>
+
+---
+
 # 🖥️ ii's Quest Menu
 ii's Quest Menu is a port of [ii's Stupid Menu](https://github.com/iiDk-the-actual/iis.Stupid.Menu) to Frida, letting it run on Quest 3-3s headsets.
 This mod utilizes a modified version of [vfsfitvnm/frida-il2cpp-bridge](https://github.com/vfsfitvnm/frida-il2cpp-bridge) to communicate with Gorilla Tag.
