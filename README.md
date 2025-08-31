@@ -19,6 +19,7 @@ You may use this mod for any purposes you desire **as long as it falls under the
 
 ## ⚠️ Disclaimer
 The exploit used to obtain root access has been **patched** in versions post V79. **Most headsets** will be able to run the exploit fine (as of 8/30/2025), but some may encounter issues or bugs. **I am not responsible for any issues or diminished performance resulting from the use of this mod with VR headsets.**
+If not following the tutorial correctly, or by writing to improper directories, you may risk bricking your headset. Know what you're doing before trying this.
 
 ## 📥 How to Use ([Video Tutorial](https://www.youtube.com/watch?v=YhiYD-SWrOo))
 1. Run the [root exploit](https://drive.iidk.online/src/Quest3-Root).
