@@ -1,4 +1,8 @@
-# ii's Quest Menu
+<p align="center">
+  <a href="#"><img src="https://i.imgur.com/HtO7VKw.png"></a>
+</p>
+
+# 🖥️ ii's Quest Menu
 ii's Quest Menu is a port of [ii's Stupid Menu](https://github.com/iiDk-the-actual/iis.Stupid.Menu) to Frida, letting it run on Quest 3-3s headsets.
 This mod utilizes a modified version of [vfsfitvnm/frida-il2cpp-bridge](https://github.com/vfsfitvnm/frida-il2cpp-bridge) to communicate with Gorilla Tag.
 You may use this mod for any purposes you desire as long as it falls under the MIT license. Feel free to modify it, add or remove mods, or even port it to other games.
@@ -6,7 +10,7 @@ You may use this mod for any purposes you desire as long as it falls under the M
 ## ⚠️ Disclaimer
 The exploit used to obtain root access has been patched in versions post v79. Most headsets will be able to run the exploit fine (as of 8/30/2025), but some may encounter issues or bugs. I am not responsible for any issues or diminished performance resulting from the use of this mod with VR headsets.
 
-## How to Use ([Video Tutorial](https://www.youtube.com/watch?v=YhiYD-SWrOo))
+## 📥 How to Use ([Video Tutorial](https://www.youtube.com/watch?v=YhiYD-SWrOo))
 1. Run the [root exploit](https://drive.iidk.online/src/Quest3-Root).
 2. Run the Frida server `./data/local/tmp/frida-server &` (If doing on standalone only, Termux > `su`, `cd`, the command).
 3. Run the following commands: `adb tcpip 5000` `adb connect 192.168.[local ip address]:5000` `pip install frida`
