@@ -18,7 +18,7 @@ This mod utilizes a modified version of [vfsfitvnm/frida-il2cpp-bridge](https://
 You may use this mod for any purposes you desire as long as it falls under the MIT license. Feel free to modify it, add or remove mods, or even port it to other games.
 
 ## ⚠️ Disclaimer
-The exploit used to obtain root access has been patched in versions post v79. Most headsets will be able to run the exploit fine (as of 8/30/2025), but some may encounter issues or bugs. I am not responsible for any issues or diminished performance resulting from the use of this mod with VR headsets.
+The exploit used to obtain root access has been **patched** in versions post V79. **Most headsets** will be able to run the exploit fine (as of 8/30/2025), but some may encounter issues or bugs. **I am not responsible for any issues or diminished performance resulting from the use of this mod with VR headsets.**
 
 ## 📥 How to Use ([Video Tutorial](https://www.youtube.com/watch?v=YhiYD-SWrOo))
 1. Run the [root exploit](https://drive.iidk.online/src/Quest3-Root).
