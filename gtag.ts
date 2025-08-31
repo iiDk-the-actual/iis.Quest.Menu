@@ -311,6 +311,13 @@ Il2Cpp.perform(() => {
     getComponent(disconnectButton, BoxCollider).method("set_isTrigger").invoke(true);
     renderMenuText(canvasObject, "Disconnect", textColor, [0.11, 0, 0.225], [1, 0.1]);
 
+    const returnButton = createObject([0.1, -0.175, -0.225], identityQuaternion, [0.09, 0.09, 0.09], 3, buttonColor, getTransform(menu));
+    returnButton.method("set_name").invoke(Il2Cpp.string("@GlobalReturn"));
+    
+    addComponent(returnButton, GorillaReportButton);
+    getComponent(returnButton, BoxCollider).method("set_isTrigger").invoke(true);
+    renderMenuText(canvasObject, "<", textColor, [0.11, -0.175, -0.225], [1, 0.1]);
+
     {
       const pageButton = createObject([0.1, 0.2, 0], identityQuaternion, [0.09, 0.2, 0.9], 3, buttonColor, getTransform(menu));
       pageButton.method("set_name").invoke(Il2Cpp.string("@PreviousPage"));
@@ -610,6 +617,12 @@ Il2Cpp.perform(() => {
           currentPage %= lastPage + 1;
         },
         isTogglable: false
+      }),
+      new ButtonInfo({
+        buttonText: "GlobalReturn",
+        method: () => currentCategory = 0,
+        isTogglable: false,
+        toolTip: "Returns you back to the main category."
       })
     ],
 
