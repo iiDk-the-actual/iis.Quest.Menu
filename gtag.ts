@@ -620,7 +620,10 @@ Il2Cpp.perform(() => {
       }),
       new ButtonInfo({
         buttonText: "GlobalReturn",
-        method: () => currentCategory = 0,
+        method: () => {
+          currentCategory = 0;
+          currentPage = 0;
+        },
         isTogglable: false,
         toolTip: "Returns you back to the main category."
       })
