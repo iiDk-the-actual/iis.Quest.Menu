@@ -26,21 +26,32 @@ let rightTrigger = false;
 
 let deltaTime = 0.0;
 let time = 0.0;
+let frameCount = 0;
 
 let previousGhostKey = false;
 let previousInvisKey = false;
 let previousNoclipKey = false;
 let perviousTeleportKey = false;
 
+let walkPos = null;
+let walkNormal = null;
+
 let closePosition = null;
 let tagGunDelay = 0.0;
+let idGunDelay = 0.0;
 let splashDelay = 0.0;
 
 let leftPlatform = null;
 let rightPlatform = null;
 
+let lineRenderHolder = null;
+let isLineRenderQueued = false;
+let linePool = [];
+
 let lvT = null;
 let rvT = null;
+
+let buttonNotifications: boolean = true;
 
 let bgColor: [number, number, number, number] = [1.0, 0.5, 0.0, 1.0];
 let textColor: [number, number, number, number] = [1.0, 0.7450981, 0.4901961, 1.0];
@@ -50,6 +61,9 @@ let buttonPressedColor: [number, number, number, number] = [0.333, 0.150, 0.0, 1
 
 let menuName: string = "ii's <b>Stupid</b> Menu";
 let themeIndex = 0;
+
+let currentNotification: string = "";
+let notifactionResetTime: number = 0;
 
 Il2Cpp.perform(() => {
   const images = {
@@ -77,6 +91,7 @@ Il2Cpp.perform(() => {
   const GTPlayerClass = AssemblyCSharp.class("GorillaLocomotion.GTPlayer");
   const VRRig = AssemblyCSharp.class("VRRig");
   const GorillaNot = AssemblyCSharp.class("GorillaNot");
+  const GorillaParentClass = AssemblyCSharp.class("GorillaParent");
   const NetworkSystemClass = AssemblyCSharp.class("NetworkSystem");
   const GorillaReportButton = AssemblyCSharp.class("GorillaReportButton");
   const FreeHoverboardManager = AssemblyCSharp.class("FreeHoverboardManager").method("get_instance").invoke();
@@ -117,6 +132,7 @@ Il2Cpp.perform(() => {
   const TextMeshPro = UnityTextMeshPro.class("TMPro.TextMeshPro");
 
   const GorillaTagger = GorillaTaggerClass.field("_instance").value;
+  const GorillaParent = GorillaParentClass.field("instance").value;
   const NetworkSystem = NetworkSystemClass.field("Instance").value;
   const rigidbody = GorillaTagger.field("<rigidbody>k__BackingField").value;
 
@@ -127,6 +143,8 @@ Il2Cpp.perform(() => {
   const UberShader = Shader.method("Find").invoke(Il2Cpp.string("GorillaTag/UberShader"));
   const TextShader = Shader.method("Find").invoke(Il2Cpp.string("GUI/Text Shader"));
 
+  const GorillaSurfaceOverride = AssemblyCSharp.class("GorillaSurfaceOverride");
+  
   const zeroVector = Vector3.field("zeroVector").value;
   const oneVector = Vector3.field("oneVector").value;
   const identityQuaternion = Quaternion.field("identityQuaternion").value;
@@ -286,6 +304,14 @@ Il2Cpp.perform(() => {
     return obj;
   }
 
+  function sendNotification(NotificationText: string = "", requiresReload: boolean = true, clearTime: number = 5){
+    const isOld = (currentNotification == NotificationText);
+    notifactionResetTime = time + clearTime;
+    currentNotification = NotificationText;
+    if (requiresReload && !isOld)
+      reloadMenu();
+  }
+
   function renderMenu(){
     menu = createObject(zeroVector, identityQuaternion, [0.1, 0.3, 0.3825], 3, [0, 0, 0, 0]);
     Destroy(getComponent(menu, BoxCollider))
@@ -303,6 +329,10 @@ Il2Cpp.perform(() => {
     canvasScaler.method("set_dynamicPixelsPerUnit").invoke(1000.0);
 
     renderMenuText(canvasObject, menuName + `<color=grey>[</color><color=white>${currentPage + 1}</color><color=grey>]</color>`, textColor, [0.11, 0, 0.175], [1, 0.1]);
+
+    if (time > notifactionResetTime)
+      currentNotification = "";
+    renderMenuText(canvasObject, currentNotification, textColor, [0.11, 0, 0.275], [1, 0.1]);
 
     const disconnectButton = createObject([0.1, 0.0, 0.225], identityQuaternion, [0.09, 0.9, 0.08], 3, buttonColor, getTransform(menu));
     disconnectButton.method("set_name").invoke(Il2Cpp.string("@Disconnect"));
@@ -695,6 +725,13 @@ Il2Cpp.perform(() => {
         },
         toolTip: "Freezes your character while in the menu."
       }),
+      new ButtonInfo({
+        buttonText: "Button Notifications",
+        enabled: true,
+        method: () => buttonNotifications = true,
+        disableMethod: () => buttonNotifications = false,
+        toolTip: "Shows notifications when clicking menu buttons, may cause lag."
+      }),
     ],
 
     [ // Movement Mods [3]
@@ -734,6 +771,68 @@ Il2Cpp.perform(() => {
         },
         toolTip: "Spawns platforms when pressing grip."
       }),
+      
+      new ButtonInfo({
+        buttonText: "Trigger Platforms",
+        method: () => {
+          if (leftTrigger){
+            if (leftPlatform == null){
+              const handTransform = leftHandTransform;
+              leftPlatform = createObject(handTransform.method("get_position").invoke(), handTransform.method("get_rotation").invoke(), [0.025, 0.15, 0.2], 3, bgColor);
+            }
+          } else {
+            if (leftPlatform != null){
+              Destroy(leftPlatform);
+              leftPlatform = null;
+            }
+          }
+
+          if (rightTrigger){
+            if (rightPlatform == null){
+              const handTransform = rightHandTransform;
+              rightPlatform = createObject(handTransform.method("get_position").invoke(), handTransform.method("get_rotation").invoke(), [0.025, 0.15, 0.2], 3, bgColor);
+            }
+          } else {
+            if (rightPlatform != null){
+              Destroy(rightPlatform);
+              rightPlatform = null;
+            }
+          }
+        },
+        toolTip: "Spawns platforms when pressing trigger."
+      }),
+      
+      new ButtonInfo({
+        buttonText: "Frozone",
+        method: () => {
+          if (leftGrab){
+            if (leftPlatform == null){
+              const handTransform = leftHandTransform;
+              leftPlatform = createObject(handTransform.method("get_position").invoke(), handTransform.method("get_rotation").invoke(), [0.025, 0.15, 0.2], 3, bgColor);
+              addComponent(leftPlatform, GorillaSurfaceOverride).field("overrideIndex").value = 61;
+            }
+          } else {
+            if (leftPlatform != null){
+              Destroy(leftPlatform);
+              leftPlatform = null;
+            }
+          }
+
+          if (rightGrab){
+            if (rightPlatform == null){
+              const handTransform = rightHandTransform;
+              rightPlatform = createObject(handTransform.method("get_position").invoke(), handTransform.method("get_rotation").invoke(), [0.025, 0.15, 0.2], 3, bgColor);
+              addComponent(rightPlatform, GorillaSurfaceOverride).field("overrideIndex").value = 61;
+            }
+          } else {
+            if (rightPlatform != null){
+              Destroy(rightPlatform);
+              rightPlatform = null;
+            }
+          }
+        },
+        toolTip: "Spawns slippy platforms when pressing grip."
+      }),
 
       new ButtonInfo({
         buttonText: "Fly",
@@ -753,6 +852,111 @@ Il2Cpp.perform(() => {
           }
         },
         toolTip: "Lets you fly around while holding A."
+      }),
+
+      new ButtonInfo({
+        buttonText: "Trigger Fly",
+        method: () => {
+          if (rightTrigger){
+            rigidbody.method("set_velocity").invoke(Vector3.field("zeroVector").value);
+
+            const transform = getTransform(GorillaTagger);
+            let forward = getTransform(headCollider).method("get_forward").invoke();
+
+            let position = transform.method("get_position").invoke();
+            forward = Vector3.method("op_Multiply", 2).invoke(forward, 25.0 * deltaTime);
+
+            position = Vector3.method("op_Addition", 2).invoke(position, forward);
+
+            transform.method("set_position").invoke(position);
+          }
+        },
+        toolTip: "Lets you fly around while holding trigger."
+      }),
+
+      new ButtonInfo({
+        buttonText: "Up And Down",
+        method: () => {
+          if (rightTrigger && rightGrab){
+            rigidbody.method("set_velocity").invoke(Vector3.field("zeroVector").value);
+          }
+          if (rightTrigger && !rightGrab){
+            rigidbody.method("AddForce").invoke(Vector3.field("upVector").value, 175 * deltaTime);
+          }
+          if (!rightTrigger && rightGrab){
+            rigidbody.method("AddForce").invoke(Vector3.field("downVector").value, 175 * deltaTime);
+          }
+        },
+        toolTip: "Makes you go up when holding trigger, and down when holding grip."
+      }),
+
+      new ButtonInfo({
+        buttonText: "No Tag Freeze",
+        method: () => GTPlayer.field("disableMovement").value = false,
+        toolTip: "Disables tag freeze on your character.",
+      }),
+
+      new ButtonInfo({
+        buttonText: "Low Gravity",
+        method: () => {
+          const force = Vector3.method("op_Multiply", 2).invoke(Vector3.field("upVector").value, (deltaTime * (6.66 / deltaTime)));
+          rigidbody.method("AddForce", 2).invoke(force, 5);
+        },
+        toolTip: "Makes gravity lower on your character."
+      }),
+
+      new ButtonInfo({
+        buttonText: "Zero Gravity",
+        method: () => { 
+          const force = Vector3.method("op_Multiply", 2).invoke(Vector3.field("upVector").value, (deltaTime * (9.81 / deltaTime)));
+          rigidbody.method("AddForce", 2).invoke(force, 5);
+        },
+        toolTip: "Makes gravity lower on your character."
+      }),
+
+      new ButtonInfo({
+        buttonText: "High Gravity",
+        method: () => {
+          const force = Vector3.method("op_Multiply", 2).invoke(Vector3.field("downVector").value, (deltaTime * (7.77 / deltaTime)));
+          rigidbody.method("AddForce", 2).invoke(force, 5);
+        },
+        toolTip: "Makes gravity higher on your character."
+      }),
+
+      new ButtonInfo({
+        buttonText: "Weak Wall Walk",
+        method: () => {
+          if (GTPlayer.method("IsHandTouching").invoke(true) || GTPlayer.method("IsHandTouching").invoke(false)){
+            const ray = GTPlayer.field("lastHitInfoHand").value;
+            walkPos = ray.method("get_point").invoke();
+            walkNormal = ray.method("get_normal").invoke();
+          }
+          if (walkPos != Vector3.field("zeroVector").value && rightGrab){
+            const force = Vector3.method("op_Multiply", 2).invoke(walkNormal, -5);
+            rigidbody.method("AddForce").invoke(force, 5);
+            const zeroForce = Vector3.method("op_Multiply", 2).invoke(Vector3.field("upVector").value, (deltaTime * (9.81 / deltaTime)));
+            rigidbody.method("AddForce", 2).invoke(zeroForce, 5);
+          }
+        },
+        toolTip: "Makes you get brought towards any wall you touch when holding grip, but weaker."
+      }),
+
+      new ButtonInfo({
+        buttonText: "Wall Walk",
+        method: () => {
+          if (GTPlayer.method("IsHandTouching").invoke(true) || GTPlayer.method("IsHandTouching").invoke(false)){
+            const ray = GTPlayer.field("lastHitInfoHand").value;
+            walkPos = ray.method("get_point").invoke();
+            walkNormal = ray.method("get_normal").invoke();
+          }
+          if (walkPos != Vector3.field("zeroVector").value && rightGrab){
+            const force = Vector3.method("op_Multiply", 2).invoke(walkNormal, -9.81);
+            rigidbody.method("AddForce").invoke(force, 5);
+            const zeroForce = Vector3.method("op_Multiply", 2).invoke(Vector3.field("upVector").value, (deltaTime * (9.81 / deltaTime)));
+            rigidbody.method("AddForce", 2).invoke(zeroForce, 5);
+          }
+        },
+        toolTip: "Makes you get brought towards any wall you touch when holding grip."
       }),
 
       new ButtonInfo({
@@ -961,9 +1165,31 @@ Il2Cpp.perform(() => {
         },
         toolTip: "Splashes water on your hands when pressing your grips."
       }),
+      new ButtonInfo({
+        buttonText: "Get ID Gun",
+        method: () => {
+          if (rightGrab){
+            const gunData = renderGun();
+            const ray = gunData.ray;
+
+            if (rightTrigger){
+              const gunTarget = getComponentInParent(ray.method("get_collider").invoke(), VRRig);
+              if (gunTarget && !gunTarget.handle.isNull() && time > idGunDelay){
+                if (!playerIsLocal(gunTarget)){
+                  idGunDelay = time + 0.5;
+                  const id = gunTarget.method("get_Creator").invoke().method("get_UserId").invoke();
+                  sendNotification( "ID: " + String(id) );
+                }
+              }
+            }
+          }
+        },
+        isTogglable: true,
+        toolTip: "Logs the ID of whoever your hand desires."
+      }),
     ],
 
-    [ // Advantage Mods [4]
+    [ // Advantage Mods [5]
       new ButtonInfo({
         buttonText: "Exit Advantage Mods",
         method: () => currentCategory = 0,
@@ -995,6 +1221,136 @@ Il2Cpp.perform(() => {
         },
         isTogglable: true,
         toolTip: "Tags whoever your hand desires."
+      }),
+      new ButtonInfo({
+        buttonText: "Casual Tracers",
+        disableMethod: () => {
+          for (let line of linePool){
+            line.method("get_gameObject").invoke().method("SetActive").invoke(false);
+          }
+        },
+        method: () => {
+          if (frameCount % 5 != 0){
+            for (let line of linePool){
+              line.method("get_gameObject").invoke().method("SetActive").invoke(false);
+            }
+            const vrrigs = GorillaParent.field("vrrigs").value;
+            const vrrigtotal = vrrigs.method("get_Count").invoke();
+            for (let i = 0; i < vrrigtotal; i++){
+              const playerRig = vrrigs.method("get_Item").invoke(i);
+              if (!playerIsLocal(playerRig)){
+                const color = playerRig.field("playerColor").value;
+                if (lineRenderHolder == null){
+                  lineRenderHolder = GameObject.new("LineRender_Holder");
+                }
+                let finalRender = null;
+                let nl = false;
+                for (let line of linePool){
+                  if (finalRender != null) continue;
+                  if (line.method("get_gameObject").invoke().method("get_activeInHierarchy").invoke() == false){
+                    line.method("get_gameObject").invoke().method("SetActive").invoke(true);
+                    finalRender = line;
+                    break;
+                  }
+                }
+                if (finalRender == null)
+                {
+                  nl = true;
+                  const lineHolder = GameObject.new("LineObject");
+                  getTransform(lineHolder).method("set_parent").invoke(getTransform(lineRenderHolder));
+                  const newLine = addComponent(lineHolder, LineRenderer);
+                  const shader = Shader.method("Find").overload("System.String").invoke(Il2Cpp.string("GUI/Text Shader"));
+                  newLine.method("get_material").invoke().method("set_shader").invoke(shader);
+                  newLine.method("set_startWidth").invoke(0.025);
+                  newLine.method("set_endWidth").invoke(0.025);
+                  newLine.method("get_gameObject").invoke().method("SetActive").invoke(true);
+                  newLine.method("set_useWorldSpace").invoke(true);
+                  newLine.method("get_gameObject").invoke().method("set_layer").invoke(lineRenderHolder.method("get_layer").invoke());
+                  linePool.push(newLine);
+                  finalRender = newLine;
+                }
+                finalRender.method("set_startColor").invoke(color);
+                finalRender.method("set_endColor").invoke(color);
+                finalRender.method("SetPosition").invoke(1, getTransform(playerRig).method("get_position").invoke());
+                finalRender.method("SetPosition").invoke(0, rightHandTransform.method("get_position").invoke());
+              }
+            }
+          }
+        },
+        isTogglable: true,
+        toolTip: "Puts tracers on your right hand. Shows everyone."
+      }),
+      new ButtonInfo({
+        buttonText: "Nearest Tracer",
+        disableMethod: () => {
+          for (let line of linePool){
+            line.method("get_gameObject").invoke().method("SetActive").invoke(false);
+          }
+        },
+        method: () => {
+          if (frameCount % 5 != 0){
+            let lowestDistance = Number.MAX_SAFE_INTEGER;
+            let closest = 0;
+            for (let line of linePool){
+              line.method("get_gameObject").invoke().method("SetActive").invoke(false);
+            }
+            const vrrigs = GorillaParent.field("vrrigs").value;
+            const vrrigtotal = vrrigs.method("get_Count").invoke();
+            const rigs = [];
+            for (let i = 0; i < vrrigtotal; i++){
+              const playerRig = vrrigs.method("get_Item").invoke(i);
+              rigs.push(playerRig);
+              if (playerIsLocal(playerRig)) continue;
+              const dist = Vector3.method("Distance").invoke(getTransform(headCollider).method("get_position").invoke(), getTransform(playerRig).method("get_position").invoke());
+              if (lowestDistance > dist){
+                lowestDistance = dist;
+                closest = i;
+              }
+            }
+            for (let i = 0; i < vrrigtotal; i++){
+              if (i != closest) continue;
+              const playerRig = rigs[i];
+              if (!playerIsLocal(playerRig)){
+                const color = playerRig.field("playerColor").value;
+                if (lineRenderHolder == null){
+                  lineRenderHolder = GameObject.new("LineRender_Holder");
+                }
+                let finalRender = null;
+                let nl = false;
+                for (let line of linePool){
+                  if (finalRender != null) continue;
+                  if (line.method("get_gameObject").invoke().method("get_activeInHierarchy").invoke() == false){
+                    line.method("get_gameObject").invoke().method("SetActive").invoke(true);
+                    finalRender = line;
+                    break;
+                  }
+                }
+                if (finalRender == null)
+                {
+                  nl = true;
+                  const lineHolder = GameObject.new("LineObject");
+                  getTransform(lineHolder).method("set_parent").invoke(getTransform(lineRenderHolder));
+                  const newLine = addComponent(lineHolder, LineRenderer);
+                  const shader = Shader.method("Find").overload("System.String").invoke(Il2Cpp.string("GUI/Text Shader"));
+                  newLine.method("get_material").invoke().method("set_shader").invoke(shader);
+                  newLine.method("set_startWidth").invoke(0.025);
+                  newLine.method("set_endWidth").invoke(0.025);
+                  newLine.method("get_gameObject").invoke().method("SetActive").invoke(true);
+                  newLine.method("set_useWorldSpace").invoke(true);
+                  newLine.method("get_gameObject").invoke().method("set_layer").invoke(lineRenderHolder.method("get_layer").invoke());
+                  linePool.push(newLine);
+                  finalRender = newLine;
+                }
+                finalRender.method("set_startColor").invoke(color);
+                finalRender.method("set_endColor").invoke(color);
+                finalRender.method("SetPosition").invoke(1, getTransform(playerRig).method("get_position").invoke());
+                finalRender.method("SetPosition").invoke(0, rightHandTransform.method("get_position").invoke());
+              }
+            }
+          }
+        },
+        isTogglable: true,
+        toolTip: "Puts tracers on your right hand. Shows only the nearest player to reduce lag."
       }),
     ],
   ];
@@ -1028,13 +1384,19 @@ Il2Cpp.perform(() => {
 
               reloadMenu();
               if (button?.enabled) {
+                if (button.toolTip && buttonNotifications)
+                  sendNotification("<color=grey>[</color><color=green>ENABLE</color><color=grey>]</color> "+button.toolTip, false);
                 button.enableMethod?.();
               } else {
+                if (button.toolTip && buttonNotifications)
+                  sendNotification("<color=grey>[</color><color=red>DISABLE</color><color=grey>]</color> "+button.toolTip, false);
                 button?.disableMethod?.();
               }
 
             } else{
               reloadMenu();
+              if (button.toolTip && buttonNotifications)
+                sendNotification("<color=grey>[</color><color=green>ENABLE</color><color=grey>]</color> "+button.toolTip, false);
               button?.method?.();
             }
           }
@@ -1108,9 +1470,13 @@ Il2Cpp.perform(() => {
 
     deltaTime = Time.method("get_deltaTime").invoke();
     time = Time.method("get_time").invoke();
+    frameCount++;
 
     if (leftSecondary)
     {
+      if (currentNotification != "" && time > notifactionResetTime)
+        reloadMenu();
+
       if (menu == null)
       {
         renderMenu();
