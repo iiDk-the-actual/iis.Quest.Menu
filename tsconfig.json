@@ -3,9 +3,9 @@
     "target": "es2020",
     "module": "commonjs",
     "lib": ["es2020"],
-    "types": ["frida-gum"],
-    "strict": false,
+    "strict": true,
     "noEmitOnError": false,
-    "skipLibCheck": true
+    "skipLibCheck": true,
+    "noImplicitAny": false
   }
 }
