@@ -40,9 +40,15 @@ let closePosition = null;
 let tagGunDelay = 0.0;
 let idGunDelay = 0.0;
 let splashDelay = 0.0;
+let lagGunDelay = 0.0;
+
+let lastTime = 0.0;
+let oldSlide = null;
 
 let leftPlatform = null;
 let rightPlatform = null;
+
+let checkpoint = null;
 
 let lineRenderHolder = null;
 let isLineRenderQueued = false;
@@ -52,6 +58,8 @@ let lvT = null;
 let rvT = null;
 
 let buttonNotifications: boolean = true;
+
+let highPunchPower = false;
 
 let bgColor: [number, number, number, number] = [1.0, 0.5, 0.0, 1.0];
 let textColor: [number, number, number, number] = [1.0, 0.7450981, 0.4901961, 1.0];
@@ -96,6 +104,7 @@ Il2Cpp.perform(() => {
   const GorillaReportButton = AssemblyCSharp.class("GorillaReportButton");
   const FreeHoverboardManager = AssemblyCSharp.class("FreeHoverboardManager").method("get_instance").invoke();
   const GameMode = AssemblyCSharp.class("GorillaGameModes.GameMode");
+  const FriendshipGroupDetection = AssemblyCSharp.class("GorillaTagScripts.FriendshipGroupDetection").method("get_Instance").invoke();
   const GorillaVelocityTracker = AssemblyCSharp.class("GorillaLocomotion.Climbing.GorillaVelocityTracker");
   const PhotonNetwork = PhotonUnityNetworking.class("Photon.Pun.PhotonNetwork");
   const RpcTarget = PhotonUnityNetworking.class("Photon.Pun.RpcTarget");
@@ -103,6 +112,7 @@ Il2Cpp.perform(() => {
   const GameObject = UnityEngineCore.class("UnityEngine.GameObject");
   const Object = UnityEngineCore.class("UnityEngine.Object");
   const SystemObject = Il2Cpp.corlib.class("System.Object");
+  const Thread = Il2Cpp.corlib.class("System.Threading.Thread");
   const Vector3 = UnityEngineCore.class("UnityEngine.Vector3");
   const Quaternion = UnityEngineCore.class("UnityEngine.Quaternion");
   const Time = UnityEngineCore.class("UnityEngine.Time");
@@ -133,6 +143,7 @@ Il2Cpp.perform(() => {
 
   const GorillaTagger = GorillaTaggerClass.field("_instance").value;
   const GorillaParent = GorillaParentClass.field("instance").value;
+  const GorillaNotInst = GorillaNot.field("instance").value;
   const NetworkSystem = NetworkSystemClass.field("Instance").value;
   const rigidbody = GorillaTagger.field("<rigidbody>k__BackingField").value;
 
@@ -153,6 +164,9 @@ Il2Cpp.perform(() => {
   const rightHandTransform = GorillaTagger.field("rightHandTransform").value;
   const headCollider = GorillaTagger.field("headCollider").value;
   const bodyCollider = GorillaTagger.field("bodyCollider").value;
+
+  const punchLastLeft = [ zeroVector, zeroVector, zeroVector, zeroVector, zeroVector, zeroVector, zeroVector, zeroVector, zeroVector, zeroVector ];
+  const punchLastRight = [ zeroVector, zeroVector, zeroVector, zeroVector, zeroVector, zeroVector, zeroVector, zeroVector, zeroVector, zeroVector ];
 
   const arial = Resources
     .method("GetBuiltinResource", 1) 
@@ -732,6 +746,12 @@ Il2Cpp.perform(() => {
         disableMethod: () => buttonNotifications = false,
         toolTip: "Shows notifications when clicking menu buttons, may cause lag."
       }),
+      new ButtonInfo({
+        buttonText: "High Punch Power",
+        enableMethod: () => highPunchPower = true,
+        disableMethod: () => highPunchPower = false,
+        toolTip: "Makes punch mod more powerful."
+      }),
     ],
 
     [ // Movement Mods [3]
@@ -891,6 +911,36 @@ Il2Cpp.perform(() => {
       }),
 
       new ButtonInfo({
+        buttonText: "Checkpoint",
+        disableMethod: () => {
+          if (checkpoint != null){
+            Destroy(checkpoint);
+            checkpoint = null;
+          }
+        },
+        method: () => {
+          if (rightGrab && !rightPrimary){
+            if (checkpoint == null){
+              const handTransform = rightHandTransform;
+              checkpoint = createObject(handTransform.method("get_position").invoke(), identityQuaternion, [0.2, 0.2, 0.2], 3, bgColor);
+              Destroy(getComponent(checkpoint, BoxCollider));
+            } else {
+              const handTransform = rightHandTransform;
+              checkpoint.method("get_transform").invoke().method("set_position").invoke(handTransform.method("get_position").invoke())
+            }
+          }
+          if (rightPrimary){
+            if (checkpoint != null){
+              teleportPlayer(checkpoint.method("get_transform").invoke().method("get_position").invoke())
+              rigidbody.method("set_velocity").invoke(zeroVector);
+            }
+          }
+        },
+        toolTip: "Place a checkpoint with grip and teleport to it with A."
+      }),
+
+
+      new ButtonInfo({
         buttonText: "No Tag Freeze",
         method: () => GTPlayer.field("disableMovement").value = false,
         toolTip: "Disables tag freeze on your character.",
@@ -975,6 +1025,19 @@ Il2Cpp.perform(() => {
           }
         },
         toolTip: "Teleports you to wherever your hand desires."
+      }),
+
+      new ButtonInfo({
+        buttonText: "Teleport To Random",
+        method: () => {
+          const vrrigs = GorillaParent.field("vrrigs").value;
+          const vrrigtotal = vrrigs.method("get_Count").invoke();
+          const playerRig = vrrigs.method("get_Item").invoke(Math.floor(Math.random() * vrrigtotal));
+          teleportPlayer(getTransform(playerRig).method("get_position").invoke());
+          rigidbody.method("set_velocity").invoke(zeroVector);
+        },
+        isTogglable: false,
+        toolTip: "Teleports you to a random player."
       }),
 
       new ButtonInfo({
@@ -1187,6 +1250,104 @@ Il2Cpp.perform(() => {
         isTogglable: true,
         toolTip: "Logs the ID of whoever your hand desires."
       }),
+      new ButtonInfo({
+        buttonText: "Get Platform Gun",
+        method: () => {
+          if (rightGrab){
+            const gunData = renderGun();
+            const ray = gunData.ray;
+
+            if (rightTrigger){
+              const gunTarget = getComponentInParent(ray.method("get_collider").invoke(), VRRig);
+              if (gunTarget && !gunTarget.handle.isNull() && time > idGunDelay){
+                if (!playerIsLocal(gunTarget)){
+                  idGunDelay = time + 0.5;
+                  const player = gunTarget.method("get_Creator").invoke();
+                  const concat = String(gunTarget.field("concatStringOfCosmeticsAllowed").value);
+                  const isSteam = (concat.includes("S. FIRST LOGIN") || concat.includes("FIRST LOGIN")) && !concat.includes("LMAKT.");
+                  sendNotification( isSteam ? "PLATFORM: Steam" : "PLATFORM: Meta" );
+                }
+              }
+            }
+          }
+        },
+        isTogglable: true,
+        toolTip: "Logs the platform of whoever your hand desires."
+      }),
+      new ButtonInfo({
+        buttonText: "Rig Gun",
+        disableMethod: () => {
+          LocalRig.method("set_enabled").invoke(true);
+        },
+        method: () => {
+          if (rightGrab){
+            const gunData = renderGun();
+            const gunPointer = gunData.gunPointer;
+
+            if (rightTrigger){
+              LocalRig.method("set_enabled").invoke(false);
+              const position = Vector3.method("op_Addition", 2).invoke([0, 1, 0], getTransform(gunPointer).method("get_position").invoke());
+              getTransform(LocalRig).method("set_position").invoke(position);
+            } else {
+              LocalRig.method("set_enabled").invoke(true);
+            }
+          }
+        },
+        toolTip: "Moves your rig to wherever your hand desires."
+      }),
+      new ButtonInfo({
+        buttonText: "Grab Rig",
+        disableMethod: () => {
+          LocalRig.method("set_enabled").invoke(true);
+        },
+        method: () => {
+          if (rightGrab){
+            LocalRig.method("set_enabled").invoke(false);
+            getTransform(LocalRig).method("set_position").invoke(rightHandTransform.method("get_position").invoke());
+          } else {
+            LocalRig.method("set_enabled").invoke(true);
+          }
+        },
+        toolTip: "Lets you grab your rig when holding grip."
+      }),
+      new ButtonInfo({
+        buttonText: "Punch Mod",
+        method: () => {
+          // This is MORE optimized (BY A LOT) than the one in the steam menu.
+          const vrrigs = GorillaParent.field("vrrigs").value;
+          const vrrigtotal = vrrigs.method("get_Count").invoke();
+          let index = 0;
+          for (let i = 0; i < vrrigtotal; i++){
+            const vrrig = vrrigs.method("get_Item").invoke(i);
+            index++;
+            let they = vrrig.field("rightHandTransform").value.method("get_position").invoke();
+            const notthem = getTransform(headCollider).method("get_position").invoke();
+            let distance = Vector3.method("Distance").invoke(they, notthem);
+            if (distance < 0.25){
+              const vel = Vector3.method("op_Addition", 2).invoke(Vector3.method("op_Multiply").invoke(Vector3.method("Normalize").invoke(Vector3.method("op_Subtraction", 2).invoke(they, punchLastRight[index])), highPunchPower ? 10 : 5), rigidbody.method("get_velocity").invoke());
+              rigidbody.method("set_velocity").invoke(vel);
+            }
+            punchLastRight[index] = they;
+            they = vrrig.field("leftHandTransform").value.method("get_position").invoke();
+            distance = Vector3.method("Distance").invoke(they, notthem);
+            if (distance < 0.25){
+              const vel = Vector3.method("op_Addition", 2).invoke(Vector3.method("op_Multiply").invoke(Vector3.method("Normalize").invoke(Vector3.method("op_Subtraction", 2).invoke(they, punchLastLeft[index])), highPunchPower ? 10 : 5), rigidbody.method("get_velocity").invoke());
+              rigidbody.method("set_velocity").invoke(vel);
+            }
+            punchLastLeft[index] = they;
+          }
+        },
+        toolTip: "Lets people punch you across the map."
+      }),
+      new ButtonInfo({
+        buttonText: "Slide Control",
+        enableMethod: () => {
+          oldSlide = GTPlayer.field("slideControl").value;
+          GTPlayer.field("slideControl").value = 1;
+        },
+        disableMethod: () => GTPlayer.field("slideControl").value = oldSlide,
+        toolTip: "Lets you control yourself on ice perfectly."
+      }),
     ],
 
     [ // Advantage Mods [5]
@@ -1221,6 +1382,51 @@ Il2Cpp.perform(() => {
         },
         isTogglable: true,
         toolTip: "Tags whoever your hand desires."
+      }),
+      new ButtonInfo({
+        buttonText: "72 FPS",
+        method: () => {
+          const targetDelta = 1 / 72;
+          const elapsed = Time.method("get_realtimeSinceStartup").invoke() - lastTime;
+          if (elapsed < targetDelta){
+            const sleepMs = Math.floor((targetDelta - elapsed) * 1000);
+            if (sleepMs > 0)
+              Thread.method("Sleep").invoke(sleepMs);
+          }
+          lastTime = Time.method("get_realtimeSinceStartup").invoke();
+        },
+        isTogglable: true,
+        toolTip: "Caps your FPS at 72 frames per second."
+      }),
+      new ButtonInfo({
+        buttonText: "60 FPS",
+        method: () => {
+          const targetDelta = 1 / 60;
+          const elapsed = Time.method("get_realtimeSinceStartup").invoke() - lastTime;
+          if (elapsed < targetDelta){
+            const sleepMs = Math.floor((targetDelta - elapsed) * 1000);
+            if (sleepMs > 0)
+              Thread.method("Sleep").invoke(sleepMs);
+          }
+          lastTime = Time.method("get_realtimeSinceStartup").invoke();
+        },
+        isTogglable: true,
+        toolTip: "Caps your FPS at 60 frames per second."
+      }),
+      new ButtonInfo({
+        buttonText: "45 FPS",
+        method: () => {
+          const targetDelta = 1 / 45;
+          const elapsed = Time.method("get_realtimeSinceStartup").invoke() - lastTime;
+          if (elapsed < targetDelta){
+            const sleepMs = Math.floor((targetDelta - elapsed) * 1000);
+            if (sleepMs > 0)
+              Thread.method("Sleep").invoke(sleepMs);
+          }
+          lastTime = Time.method("get_realtimeSinceStartup").invoke();
+        },
+        isTogglable: true,
+        toolTip: "Caps your FPS at 45 frames per second."
       }),
       new ButtonInfo({
         buttonText: "Casual Tracers",
@@ -1351,6 +1557,146 @@ Il2Cpp.perform(() => {
         },
         isTogglable: true,
         toolTip: "Puts tracers on your right hand. Shows only the nearest player to reduce lag."
+      }),
+      new ButtonInfo({
+        buttonText: "Anti Moderator",
+        isTogglable: true,
+        method: () => {
+          if (frameCount % 5 != 0){
+            const vrrigs = GorillaParent.field("vrrigs").value;
+            const vrrigtotal = vrrigs.method("get_Count").invoke();
+            let shouldLeave = false;
+            for (let i = 0; i < vrrigtotal; i++){
+              const playerRig = vrrigs.method("get_Item").invoke(i); 
+              if (playerIsLocal(playerRig)) continue;
+              const concat = String(playerRig.field("concatStringOfCosmeticsAllowed").value);
+              if (concat.includes("LBAAD.")) { shouldLeave = true; break; }; // Admin
+              if (concat.includes("LBAAK.")) { shouldLeave = true; break; }; // Stick
+              if (concat.includes("LMAPY.")) { shouldLeave = true; break; }; // Forest Guide
+            }
+            if (shouldLeave == true){
+              let room = "";
+              try {
+                room = String(PhotonNetwork.method("get_CurrentRoom").invoke().method("get_Name").invoke());
+              } finally {
+                NetworkSystem.method("ReturnToSinglePlayer").invoke();
+              }
+              for (let i = 0; i < 10; i++){
+                console.log("Moderator in code " + room);
+              }
+              sendNotification("Moderator in code " + room, true, 20);
+            }
+          }
+        },
+        toolTip: "When someone with the stick joins, you get disconnected.",
+      }),
+      new ButtonInfo({
+        buttonText: "Cosmetic Tracers",
+        disableMethod: () => {
+          for (let line of linePool){
+            line.method("get_gameObject").invoke().method("SetActive").invoke(false);
+          }
+        },
+        method: () => {
+          if (frameCount % 5 != 0){
+            for (let line of linePool){
+              line.method("get_gameObject").invoke().method("SetActive").invoke(false);
+            }
+            const vrrigs = GorillaParent.field("vrrigs").value;
+            const vrrigtotal = vrrigs.method("get_Count").invoke();
+            const rigs = [];
+            const cosmeticRigs = [];
+            for (let i = 0; i < vrrigtotal; i++){
+              const playerRig = vrrigs.method("get_Item").invoke(i);
+              rigs.push(playerRig);
+              if (playerIsLocal(playerRig)) continue;
+              const concat = String(playerRig.field("concatStringOfCosmeticsAllowed").value);
+              if (concat.includes("LBAAD.")) { cosmeticRigs.push(i); continue; }; // Admin
+              if (concat.includes("LBAAK.")) { cosmeticRigs.push(i); continue; }; // Stick
+              if (concat.includes("LMAPY.")) { cosmeticRigs.push(i); continue; }; // Forest Guide
+              if (concat.includes("LBAGS.")) { cosmeticRigs.push(i); continue; }; // Illustrator
+              if (concat.includes("LBADE.")) { cosmeticRigs.push(i); continue; }; // Finger Painter
+              if (concat.includes("LBANI.")) { cosmeticRigs.push(i); continue; }; // AA Creator
+            }
+            for (let i = 0; i < vrrigtotal; i++){
+              if (cosmeticRigs.includes(i) == false) continue;
+              const playerRig = rigs[i];
+              if (!playerIsLocal(playerRig)){
+                const color = playerRig.field("playerColor").value;
+                if (lineRenderHolder == null){
+                  lineRenderHolder = GameObject.new("LineRender_Holder");
+                }
+                let finalRender = null;
+                let nl = false;
+                for (let line of linePool){
+                  if (finalRender != null) continue;
+                  if (line.method("get_gameObject").invoke().method("get_activeInHierarchy").invoke() == false){
+                    line.method("get_gameObject").invoke().method("SetActive").invoke(true);
+                    finalRender = line;
+                    break;
+                  }
+                }
+                if (finalRender == null)
+                {
+                  nl = true;
+                  const lineHolder = GameObject.new("LineObject");
+                  getTransform(lineHolder).method("set_parent").invoke(getTransform(lineRenderHolder));
+                  const newLine = addComponent(lineHolder, LineRenderer);
+                  const shader = Shader.method("Find").overload("System.String").invoke(Il2Cpp.string("GUI/Text Shader"));
+                  newLine.method("get_material").invoke().method("set_shader").invoke(shader);
+                  newLine.method("set_startWidth").invoke(0.025);
+                  newLine.method("set_endWidth").invoke(0.025);
+                  newLine.method("get_gameObject").invoke().method("SetActive").invoke(true);
+                  newLine.method("set_useWorldSpace").invoke(true);
+                  newLine.method("get_gameObject").invoke().method("set_layer").invoke(lineRenderHolder.method("get_layer").invoke());
+                  linePool.push(newLine);
+                  finalRender = newLine;
+                }
+                finalRender.method("set_startColor").invoke(color);
+                finalRender.method("set_endColor").invoke(color);
+                finalRender.method("SetPosition").invoke(1, getTransform(playerRig).method("get_position").invoke());
+                finalRender.method("SetPosition").invoke(0, rightHandTransform.method("get_position").invoke());
+              }
+            }
+          }
+        },
+        isTogglable: true,
+        toolTip: "Puts tracers on your right hand. Only shows players with rare cosmetics."
+      }),
+      new ButtonInfo({
+        buttonText: "Lag Gun",
+        method: () => {
+          if (rightGrab){
+            const gunData = renderGun();
+            const ray = gunData.ray;
+
+            if (rightTrigger){
+              const gunTarget = getComponentInParent(ray.method("get_collider").invoke(), VRRig);
+              if (gunTarget && !gunTarget.handle.isNull() && time > lagGunDelay){
+                if (!playerIsLocal(gunTarget)){
+                  lagGunDelay = time + 2;
+
+                  const plRef = gunTarget.method("get_Creator").invoke().method("get_ActorNumber"/*GetPlayerRef"*/).invoke();
+                  const arr = Il2Cpp.array(SystemObject, 0);
+                  const rpc = FriendshipGroupDetection.field("photonView").value.method("RPC");
+                  for (let i = 0; i < 425; i++) {
+                    rpc.invoke(Il2Cpp.string("NotifyPartyMerging"), plRef, arr);
+                  }
+
+                  //RPC Protection
+                  GorillaNotInst.field("rpcErrorMax").value = Number.MAX_SAFE_INTEGER;
+                  GorillaNotInst.field("rpcCallLimit").value = Number.MAX_SAFE_INTEGER;
+                  GorillaNotInst.field("logErrorMax").value = Number.MAX_SAFE_INTEGER;
+                  PhotonNetwork.method("set_MaxResendsBeforeDisconnect").invoke(Number.MAX_SAFE_INTEGER);
+                  PhotonNetwork.method("set_QuickResends").invoke(Number.MAX_SAFE_INTEGER);
+                  sendAllOutgoing();
+                }
+              }
+            }
+          }
+        },
+        isTogglable: true,
+        toolTip: "Lags whoever your hand desires. May be broken."
       }),
     ],
   ];
