@@ -6,6 +6,7 @@
     "types": ["frida-gum"],
     "strict": false,
     "noEmitOnError": false,
-    "skipLibCheck": true
+    "skipLibCheck": true,
+    "noImplicitAny": false
   }
 }
