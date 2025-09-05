@@ -251,6 +251,11 @@ Il2Cpp.perform(() => {
   }
 
   function sendAllOutgoing(){
+    GorillaNotInst.field("rpcErrorMax").value = Number.MAX_SAFE_INTEGER;
+    GorillaNotInst.field("rpcCallLimit").value = Number.MAX_SAFE_INTEGER;
+    GorillaNotInst.field("logErrorMax").value = Number.MAX_SAFE_INTEGER;
+    PhotonNetwork.method("set_MaxResendsBeforeDisconnect").invoke(Number.MAX_SAFE_INTEGER);
+    PhotonNetwork.method("set_QuickResends").invoke(Number.MAX_SAFE_INTEGER);
     PhotonNetwork.method("SendAllOutgoingCommands").invoke();
   }
 
@@ -1682,13 +1687,6 @@ Il2Cpp.perform(() => {
                   for (let i = 0; i < 425; i++) {
                     rpc.invoke(Il2Cpp.string("NotifyPartyMerging"), plRef, arr);
                   }
-
-                  //RPC Protection
-                  GorillaNotInst.field("rpcErrorMax").value = Number.MAX_SAFE_INTEGER;
-                  GorillaNotInst.field("rpcCallLimit").value = Number.MAX_SAFE_INTEGER;
-                  GorillaNotInst.field("logErrorMax").value = Number.MAX_SAFE_INTEGER;
-                  PhotonNetwork.method("set_MaxResendsBeforeDisconnect").invoke(Number.MAX_SAFE_INTEGER);
-                  PhotonNetwork.method("set_QuickResends").invoke(Number.MAX_SAFE_INTEGER);
                   sendAllOutgoing();
                 }
               }
