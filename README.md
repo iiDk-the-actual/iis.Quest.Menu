@@ -6,7 +6,6 @@
 
 <p align="center">
 	<a href="https://github.com/iiDk-the-actual/iis.Quest.Menu/releases"><img src="https://img.shields.io/github/v/release/iiDk-the-actual/iis.Quest.Menu?label=version&style=for-the-badge"></a>
-	<a href="https://github.com/iiDk-the-actual/iis.Quest.Menu/releases/latest"><img src="https://img.shields.io/github/downloads/iiDk-the-actual/iis.Quest.Menu/latest?style=for-the-badge"></a>
 	<a href="https://discord.gg/iidk"><img src="https://img.shields.io/discord/1170093288557129748?label=discord&style=for-the-badge&color=blueviolet"></a>
 </p>
 
