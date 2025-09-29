@@ -5,7 +5,7 @@ declare const Il2Cpp: any;
 declare const console: any;
 declare const XRNode: any;
 
-const version = "1.3.0";
+const version = "1.4.0";
 let boardMaterial = null;
 let buttonClickDelay = 0.0;
 let menu = null;
