@@ -53,6 +53,7 @@ let leftPlatform = null;
 let rightPlatform = null;
 
 let checkpoint = null;
+let positions = [];
 
 let lineRenderHolder = null;
 let isLineRenderQueued = false;
@@ -1085,6 +1086,56 @@ Il2Cpp.perform(() => {
             }),
 
             new ButtonInfo({
+                buttonText: "Hand Fly",
+                method: () => {
+                    if (rightPrimary) {
+                        const mulQV = Quaternion.methods.find(m =>
+                            m.name === "op_Multiply" &&
+                            m.parameterCount === 2 &&
+                            m.parameters[1].type.name.endsWith("Vector3")
+                        ); // chatgpt no orhweer way to find this
+
+                        rigidbody.method("set_velocity").invoke(Vector3.field("zeroVector").value);
+
+                        const transform = getTransform(GorillaTagger);
+                        const vrot = Quaternion.method("op_Multiply", 2).invoke(rightHandTransform.method("get_rotation").invoke(), GTPlayer.field("rightHandRotOffset").value);
+                        const vfor = Vector3.method("get_forward").invoke();
+                        let forward = mulQV.invoke(vrot, vfor);
+
+                        let position = transform.method("get_position").invoke();
+                        forward = Vector3.method("op_Multiply", 2).invoke(forward, 25.0 * deltaTime);
+
+                        position = Vector3.method("op_Addition", 2).invoke(position, forward);
+
+                        transform.method("set_position").invoke(position);
+                    }
+                },
+                toolTip: "Lets you fly around with your hand while holding A."
+            }),
+
+            new ButtonInfo({
+                buttonText: "Slow Time",
+                method: () => {
+                    const speed = -0.15;
+                    let disp = Vector3.method("op_Addition", 2).invoke(rigidbody.method("get_linearVelocity").invoke(), Physics.method("get_gravity").invoke());
+                    disp = Vector3.method("op_Multiply", 2).invoke(disp, Time.method("get_fixedDeltaTime").invoke() * speed);
+                    rigidbody.method("MovePosition").invoke(Vector3.method("op_Addition", 2).invoke(rigidbody.method("get_position").invoke(), disp))
+                },
+                toolTip: "Slows down physics."
+            }),
+
+            new ButtonInfo({
+                buttonText: "Quick Time",
+                method: () => {
+                    const speed = 0.15;
+                    let disp = Vector3.method("op_Addition", 2).invoke(rigidbody.method("get_linearVelocity").invoke(), Physics.method("get_gravity").invoke());
+                    disp = Vector3.method("op_Multiply", 2).invoke(disp, Time.method("get_fixedDeltaTime").invoke() * speed);
+                    rigidbody.method("MovePosition").invoke(Vector3.method("op_Addition", 2).invoke(rigidbody.method("get_position").invoke(), disp))
+                },
+                toolTip: "Speeds up physics."
+            }),
+
+            new ButtonInfo({
                 buttonText: "Up And Down",
                 method: () => {
                     if (rightTrigger && rightGrab) {
@@ -1099,6 +1150,7 @@ Il2Cpp.perform(() => {
                 },
                 toolTip: "Makes you go up when holding trigger, and down when holding grip."
             }),
+
             new ButtonInfo({
                 buttonText: "Size Changer",
                 disableMethod: () => {
@@ -1117,6 +1169,7 @@ Il2Cpp.perform(() => {
                 },
                 toolTip: "Makes you able to change size with triggers."
             }),
+
             new ButtonInfo({
                 buttonText: "Checkpoint",
                 disableMethod: () => {
@@ -1146,6 +1199,42 @@ Il2Cpp.perform(() => {
                 toolTip: "Place a checkpoint with grip and teleport to it with A."
             }),
 
+            new ButtonInfo({
+                buttonText: "Rewind",
+                disableMethod: () => {
+                    positions = [];
+                },
+                method: () => {
+                    if (rightTrigger) {
+                        const pos = positions[positions.length - 1];
+
+                        teleportPlayer(pos[0]);
+                        leftHandTransform.method("set_position").invoke(pos[1]);
+                        rightHandTransform.method("set_position").invoke(pos[2]);
+                        leftHandTransform.method("set_rotation").invoke(pos[3]);
+                        rightHandTransform.method("set_rotation").invoke(pos[4]);
+                        rigidbody.method("set_linearVelocity").invoke(pos[5]);
+
+                        positions.pop();
+                    } else {
+                        positions.push([
+                            bodyCollider.method("get_transform").invoke().method("get_position").invoke(),
+
+                            leftHandTransform.method("get_position").invoke(),
+                            rightHandTransform.method("get_position").invoke(),
+                            
+                            leftHandTransform.method("get_rotation").invoke(),
+                            rightHandTransform.method("get_rotation").invoke(),
+
+                            rigidbody.method("get_linearVelocity").invoke()
+                        ]);
+                        if (positions.length > 8640) {
+                            positions.shift();
+                        }
+                    }
+                },
+                toolTip: "Brings you back in time when holding trigger."
+            }),
 
             new ButtonInfo({
                 buttonText: "No Tag Freeze",
@@ -1279,6 +1368,7 @@ Il2Cpp.perform(() => {
                 },
                 toolTip: "Lets you clip through objects while holding right trigger."
             }),
+
             new ButtonInfo({
                 buttonText: "Legit Long Arms",
                 method: () => {
@@ -1289,6 +1379,7 @@ Il2Cpp.perform(() => {
                 },
                 toolTip: "Gives you Slightly longer arms."
             }),
+
             new ButtonInfo({
                 buttonText: "Long Arms",
                 method: () => {
@@ -1308,6 +1399,7 @@ Il2Cpp.perform(() => {
                 },
                 toolTip: "Gives you a speed boost."
             }),
+
             new ButtonInfo({
                 buttonText: "Slide Control",
                 enableMethod: () => {
@@ -1317,6 +1409,7 @@ Il2Cpp.perform(() => {
                 disableMethod: () => GTPlayer.field("slideControl").value = oldSlide,
                 toolTip: "Lets you control yourself on ice perfectly."
             }),
+
             new ButtonInfo({
                 buttonText: "Predictions",
                 enableMethod: () => {
@@ -1514,6 +1607,20 @@ Il2Cpp.perform(() => {
                 isTogglable: false,
                 toolTip: "Returns you back to the main category."
             }),
+
+            new ButtonInfo({
+                buttonText: "Hand Noclip",
+                method: () => {
+                    GTPlayer.field("leftHandHolding").value = true;
+                    GTPlayer.field("rightHandHolding").value = true;
+                },
+                disableMethod: () => {
+                    GTPlayer.field("leftHandHolding").value = false;
+                    GTPlayer.field("rightHandHolding").value = false;
+                },
+                toolTip: "Disables hand collisions."
+            }),
+
             new ButtonInfo({
                 buttonText: "Tag Gun",
                 method: () => {
@@ -1540,6 +1647,7 @@ Il2Cpp.perform(() => {
                 isTogglable: true,
                 toolTip: "Tags whoever your hand desires."
             }),
+
             new ButtonInfo({
                 buttonText: "Tag All",
                 isTogglable: false,
@@ -1560,6 +1668,7 @@ Il2Cpp.perform(() => {
                 },
                 toolTip: "Tags everyone"
             }),
+
             new ButtonInfo({
                 buttonText: "72 FPS",
                 method: () => {
@@ -1575,6 +1684,7 @@ Il2Cpp.perform(() => {
                 isTogglable: true,
                 toolTip: "Caps your FPS at 72 frames per second."
             }),
+
             new ButtonInfo({
                 buttonText: "60 FPS",
                 method: () => {
@@ -1590,6 +1700,7 @@ Il2Cpp.perform(() => {
                 isTogglable: true,
                 toolTip: "Caps your FPS at 60 frames per second."
             }),
+
             new ButtonInfo({
                 buttonText: "45 FPS",
                 method: () => {
@@ -2073,6 +2184,7 @@ Il2Cpp.perform(() => {
                 isTogglable: false,
                 toolTip: "Returns you back to the main category."
             }),
+
             new ButtonInfo({
                 buttonText: "Anti Moderator",
                 isTogglable: true,
