@@ -40,6 +40,8 @@ let perviousTeleportKey = false;
 let walkPos = null;
 let walkNormal = null;
 
+let previousDash = false;
+
 let closePosition = null;
 let tagGunDelay = 0.0;
 let idGunDelay = 0.0;
@@ -769,7 +771,7 @@ Il2Cpp.perform(() => {
                 buttonText: "Change Menu Theme",
                 method: () => {
                     themeIndex++;
-                    themeIndex %= 10;
+                    themeIndex %= 11;
 
                     switch (themeIndex) {
                         case 0:
@@ -850,6 +852,14 @@ Il2Cpp.perform(() => {
 
                             buttonColor = [0.1, 0.1, 0.2, 1.0];
                             buttonPressedColor = [0.4, 0.6, 1.0, 1.0];
+                            boardMaterial.method("set_color").invoke(bgColor);
+                            break;
+                        case 10:
+                            bgColor = [0.125, 0.125, 0.125, 1.0];
+                            textColor = [1.0, 1.0, 0.9, 1.0];
+
+                            buttonColor = [0.111, 0.111, 0.222, 1.0];
+                            buttonPressedColor = [0.111, 0.111, 0.67, 1.0];
                             boardMaterial.method("set_color").invoke(bgColor);
                             break;
                     }
@@ -1324,6 +1334,37 @@ Il2Cpp.perform(() => {
             }),
 
             new ButtonInfo({
+                buttonText: "Airstrike Gun",
+                method: () => {
+                    if (rightGrab) {
+                        const gunData = renderGun();
+                        const gunPointer = gunData.gunPointer;
+
+                        if (rightTrigger && !perviousTeleportKey) {
+                            teleportPlayer(Vector3.method("op_Addition", 2).invoke([0, 30, 0], getTransform(gunPointer).method("get_position").invoke()))
+                            rigidbody.method("set_velocity").invoke(zeroVector);
+                        }
+
+                        perviousTeleportKey = rightTrigger;
+                    }
+                },
+                toolTip: "Teleports you to wherever your hand desires, except farther up, then launches you back down."
+            }),
+
+            new ButtonInfo({
+                buttonText: "Airstrike Random",
+                method: () => {
+                    const vrrigs = GorillaParent.field("vrrigs").value;
+                    const vrrigtotal = vrrigs.method("get_Count").invoke();
+                    const playerRig = vrrigs.method("get_Item").invoke(Math.floor(Math.random() * vrrigtotal));
+                    teleportPlayer(Vector3.method("op_Addition", 2).invoke([0, 30, 0], getTransform(playerRig).method("get_position").invoke()));
+                    rigidbody.method("set_velocity").invoke(zeroVector);
+                },
+                isTogglable: false,
+                toolTip: "Teleports you to a random player, except farther up, then launches you back down."
+            }),
+
+            new ButtonInfo({
                 buttonText: "Teleport To Random",
                 method: () => {
                     const vrrigs = GorillaParent.field("vrrigs").value;
@@ -1334,6 +1375,19 @@ Il2Cpp.perform(() => {
                 },
                 isTogglable: false,
                 toolTip: "Teleports you to a random player."
+            }),
+
+            new ButtonInfo({
+                buttonText: "Dash",
+                method: () => {
+                    if (rightPrimary && !previousDash) {
+                        const leftRightVector = getTransform(headCollider).method("get_forward").invoke();
+                        const leftForce = Vector3.method("op_Multiply", 2).invoke(leftRightVector, 10.0);
+                        rigidbody.method("AddForce", 2).invoke(leftForce, 2);
+                    }
+                    previousDash = rightPrimary;
+                },
+                toolTip: "Flings your character forwards when pressing A."
             }),
 
             new ButtonInfo({
@@ -1726,6 +1780,18 @@ Il2Cpp.perform(() => {
                 isTogglable: false,
                 toolTip: "Returns you back to the main category."
             }),
+            
+            new ButtonInfo({
+                buttonText: "Disable Wind",
+                enableMethod: () => { // yes, this is the placement of the mod in the steam menu. correct category and all.
+                    getObject("Environment Objects/LocalObjects_Prefab/Forest/Environment/Forest_ForceVolumes/").method("SetActive").invoke(false);
+                },
+                disableMethod: () => {
+                    getObject("Environment Objects/LocalObjects_Prefab/Forest/Environment/Forest_ForceVolumes/").method("SetActive").invoke(true);
+                },
+                toolTip: "Freezes your rig when pressing A."
+            }),
+
             new ButtonInfo({
                 buttonText: "Ghost",
                 method: () => {
@@ -2146,6 +2212,7 @@ Il2Cpp.perform(() => {
                 isTogglable: false,
                 toolTip: "Returns you back to the main category."
             }),
+
             new ButtonInfo({
                 buttonText: "Lag Gun",
                 method: () => {
