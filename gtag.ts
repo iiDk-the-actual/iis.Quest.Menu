@@ -2362,7 +2362,7 @@ Il2Cpp.perform(() => {
                     const button = getIndex(goName)
                     playButtonSound();
                     if (button) {
-                        if (rightGrab) {
+                        if (leftGrab) {
                             toggleFavorite(button);
                             reloadMenu();
                         } else {                    
