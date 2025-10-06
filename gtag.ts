@@ -403,14 +403,21 @@ Il2Cpp.perform(() => {
         const targetMods = buttons[currentCategory]
             .slice(currentPage * 8)
             .slice(0, 8);
-
+        
+        const favorited = [];
+        buttons[11].forEach((buttonData) => {
+            if (buttonData.buttonText != "Exit Favorite Mods")
+                favorited.push(buttonData.buttonText);
+        });
+        const favTextColor: [number, number, number, number] = [Math.max(textColor[0] + 0.1, 1), Math.max(textColor[1] + 0.1, 1), Math.min(textColor[2] - 0.1, 0), textColor[3]]
+        
         targetMods.forEach((buttonData, index) => {
             const button = createObject([0.105, 0, 0.13 - (i * 0.04)], identityQuaternion, [0.09, 0.9, 0.08], 3, buttonColor, getTransform(menu));
             button.method("set_name").invoke(Il2Cpp.string("@" + buttonData.buttonText));
 
             addComponent(button, GorillaReportButton);
             getComponent(button, BoxCollider).method("set_isTrigger").invoke(true);
-            renderMenuText(canvasObject, buttonData.buttonText, textColor, [0.11, 0, 0.13 - (i * 0.04)], [1, 0.1]);
+            renderMenuText(canvasObject, buttonData.buttonText, favorited.includes(buttonData.buttonText) ? favTextColor : textColor, [0.11, 0, 0.13 - (i * 0.04)], [1, 0.1]);
             updateButtonColor(button, buttonData);
             i++;
         });
@@ -434,6 +441,34 @@ Il2Cpp.perform(() => {
             getTransform(reference).method("set_localPosition").invoke([0.01, -0.117, 0.05]);
             reference.method("set_layer").invoke(2);
             addComponent(reference, Rigidbody).method("set_isKinematic").invoke(true);
+        }
+    }
+    
+    function toggleFavorite(info: ButtonInfo) {
+        let exists = false;
+        for (let index = 0; index < buttons[11].length; index++) {
+            const mod = buttons[11][index];
+            if (mod.buttonText == info.buttonText)
+            {
+                exists = true;
+                break;
+            }
+        }
+        if (exists) {
+            if (info.buttonText == "Exit Favorite Mods")
+                return;
+            for (let index = 0; index < buttons[11].length; index++) {
+                const mod = buttons[11][index];
+                if (mod.buttonText == info.buttonText)
+                {
+                    buttons[11].splice(index);
+                    break;
+                }
+            }
+        } else {
+            if (info.buttonText == "Exit Favorite Mods")
+                return;
+            buttons[11].push(info);
         }
     }
 
@@ -668,6 +703,12 @@ Il2Cpp.perform(() => {
                 method: () => { currentCategory = 2; currentPage = 0 },
                 isTogglable: false,
                 toolTip: "Opens the settings category."
+            }),
+            new ButtonInfo({
+                buttonText: "Favorite Mods",
+                method: () => { currentCategory = 11; currentPage = 0 },
+                isTogglable: false,
+                toolTip: "Opens your favorite mods."
             }),
             new ButtonInfo({
                 buttonText: "Movement Mods",
@@ -1771,7 +1812,7 @@ Il2Cpp.perform(() => {
                 toolTip: "Caps your FPS at 45 frames per second."
             }),
         ],
-        [
+        [ // Rig Mods [6]
             new ButtonInfo({
                 buttonText: "Exit Rig Mods",
                 method: () => {
@@ -1957,7 +1998,7 @@ Il2Cpp.perform(() => {
                 toolTip: "Rotate your head sideways."
             }),
         ],
-        [
+        [ // Misc Mods [7]
             new ButtonInfo({
                 buttonText: "Exit Misc Mods",
                 method: () => {
@@ -1993,7 +2034,7 @@ Il2Cpp.perform(() => {
                 toolTip: "Connects you to the EU region."
             }),
         ],
-        [
+        [ // Visual Mods [8]
             new ButtonInfo({
                 buttonText: "Exit Visual Mods",
                 method: () => {
@@ -2203,7 +2244,7 @@ Il2Cpp.perform(() => {
                 toolTip: "Puts tracers on your right hand. Shows only the nearest player to reduce lag."
             }),
         ],
-        [
+        [ // Overpowered Mods [9]
             new ButtonInfo({
                 buttonText: "Exit Overpowered Mods",
                 method: () => {
@@ -2242,7 +2283,7 @@ Il2Cpp.perform(() => {
                 toolTip: "Lags whoever your hand desires. May be broken."
             }),
         ],
-        [
+        [ // Safety Mods [10]
             new ButtonInfo({
                 buttonText: "Exit Safety Mods",
                 method: () => {
@@ -2284,6 +2325,16 @@ Il2Cpp.perform(() => {
                 },
                 toolTip: "When someone with the stick joins, you get disconnected.",
             }),
+        ],
+        [ // Favorite Mods [11]
+            new ButtonInfo({
+                buttonText: "Exit Favorite Mods",
+                method: () => {
+                    currentCategory = 0; currentPage = 0
+                },
+                isTogglable: false,
+                toolTip: "Returns you back to the main category."
+            }),
         ]
     ];
 
@@ -2311,25 +2362,30 @@ Il2Cpp.perform(() => {
                     const button = getIndex(goName)
                     playButtonSound();
                     if (button) {
-                        if (button.isTogglable) {
-                            button.enabled = !button.enabled;
-
+                        if (rightGrab) {
+                            toggleFavorite(button);
                             reloadMenu();
-                            if (button?.enabled) {
+                        } else {                    
+                            if (button.isTogglable) {
+                                button.enabled = !button.enabled;
+
+                                reloadMenu();
+                                if (button?.enabled) {
+                                    if (button.toolTip && buttonNotifications)
+                                        sendNotification("<color=grey>[</color><color=green>ENABLE</color><color=grey>]</color> " + button.toolTip, false);
+                                    button.enableMethod?.();
+                                } else {
+                                    if (button.toolTip && buttonNotifications)
+                                        sendNotification("<color=grey>[</color><color=red>DISABLE</color><color=grey>]</color> " + button.toolTip, false);
+                                    button?.disableMethod?.();
+                                }
+
+                            } else {
+                                reloadMenu();
                                 if (button.toolTip && buttonNotifications)
                                     sendNotification("<color=grey>[</color><color=green>ENABLE</color><color=grey>]</color> " + button.toolTip, false);
-                                button.enableMethod?.();
-                            } else {
-                                if (button.toolTip && buttonNotifications)
-                                    sendNotification("<color=grey>[</color><color=red>DISABLE</color><color=grey>]</color> " + button.toolTip, false);
-                                button?.disableMethod?.();
+                                button?.method?.();
                             }
-
-                        } else {
-                            reloadMenu();
-                            if (button.toolTip && buttonNotifications)
-                                sendNotification("<color=grey>[</color><color=green>ENABLE</color><color=grey>]</color> " + button.toolTip, false);
-                            button?.method?.();
                         }
                     }
                 }
