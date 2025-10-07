@@ -461,7 +461,7 @@ Il2Cpp.perform(() => {
                 const mod = buttons[11][index];
                 if (mod.buttonText == info.buttonText)
                 {
-                    buttons[11].splice(index);
+                    buttons[11].splice(index, 1);
                     break;
                 }
             }
