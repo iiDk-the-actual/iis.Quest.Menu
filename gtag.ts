@@ -65,6 +65,7 @@ let lvT = null;
 let rvT = null;
 
 let buttonNotifications: boolean = true;
+let enabledRecent: boolean = false;
 
 let highPunchPower = false;
 
@@ -471,6 +472,17 @@ Il2Cpp.perform(() => {
             buttons[11].push(info);
         }
     }
+    function loadEnabled() {
+        buttons[12].splice(1);
+        buttons.forEach((buttonList, index) => {
+            if (index != 12 && index != 11) {
+                buttonList.forEach(button => {
+                    if (button.enabled)
+                        buttons[12].push(button);
+                });
+            }
+        });
+    }
 
     let gunLocked = false;
     let lockTarget = null;
@@ -709,6 +721,12 @@ Il2Cpp.perform(() => {
                 method: () => { currentCategory = 11; currentPage = 0 },
                 isTogglable: false,
                 toolTip: "Opens your favorite mods."
+            }),
+            new ButtonInfo({
+                buttonText: "Enabled Mods",
+                method: () => { currentCategory = 12; currentPage = 0; loadEnabled() },
+                isTogglable: false,
+                toolTip: "Opens your enabled mods."
             }),
             new ButtonInfo({
                 buttonText: "Movement Mods",
@@ -973,6 +991,12 @@ Il2Cpp.perform(() => {
                 method: () => buttonNotifications = true,
                 disableMethod: () => buttonNotifications = false,
                 toolTip: "Shows notifications when clicking menu buttons, may cause lag."
+            }),
+            new ButtonInfo({
+                buttonText: "Enabled Recent",
+                method: () => enabledRecent = true,
+                disableMethod: () => enabledRecent = false,
+                toolTip: "Shows recently disabled mods in enabled mods."
             }),
             new ButtonInfo({
                 buttonText: "Right Hand",
@@ -2326,10 +2350,22 @@ Il2Cpp.perform(() => {
                 toolTip: "When someone with the stick joins, you get disconnected.",
             }),
         ],
+
         [ // Favorite Mods [11]
             new ButtonInfo({
                 buttonText: "Exit Favorite Mods",
                 method: () => {
+                    currentCategory = 0; currentPage = 0
+                },
+                isTogglable: false,
+                toolTip: "Returns you back to the main category."
+            }),
+        ],
+        
+        [ // Enabled Mods [12]
+            new ButtonInfo({
+                buttonText: "Exit Enabled Mods",
+                method: () => {                    
                     currentCategory = 0; currentPage = 0
                 },
                 isTogglable: false,
@@ -2345,6 +2381,17 @@ Il2Cpp.perform(() => {
 
     function getIndex(buttonText: string): ButtonInfo {
         return buttonMap.get(buttonText);
+    }
+    function getCategoryIndex(button: ButtonInfo): number {
+        let ret = null;
+        buttons.forEach((category, categoryIndex) => {
+            category.forEach(categoryButton => {
+                if (button == categoryButton) {
+                    ret = categoryIndex;
+                }
+            });
+        });
+        return ret;
     }
 
     const ButtonActivation = GorillaReportButton.method("OnTriggerEnter");
@@ -2365,7 +2412,7 @@ Il2Cpp.perform(() => {
                         if (leftGrab) {
                             toggleFavorite(button);
                             reloadMenu();
-                        } else {                    
+                        } else {
                             if (button.isTogglable) {
                                 button.enabled = !button.enabled;
 
@@ -2386,6 +2433,8 @@ Il2Cpp.perform(() => {
                                     sendNotification("<color=grey>[</color><color=green>ENABLE</color><color=grey>]</color> " + button.toolTip, false);
                                 button?.method?.();
                             }
+                            if (getCategoryIndex(button) == 12 && !enabledRecent)
+                                loadEnabled();
                         }
                     }
                 }
