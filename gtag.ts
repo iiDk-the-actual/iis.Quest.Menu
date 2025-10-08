@@ -2498,8 +2498,12 @@ Il2Cpp.perform(() => {
         }
 
         let modCount = 0;
-        buttons.forEach(category => {
-            modCount += category.length;
+        buttons.forEach((category, categoryIndex) => {
+            if (categoryIndex == 12) {
+                modCount += 1;
+            } else {
+                modCount += category.length;
+            }
         }); 
 
         const motdTitle = getComponent(getObject("Environment Objects/LocalObjects_Prefab/TreeRoom/motdHeadingText"), TextMeshPro);
