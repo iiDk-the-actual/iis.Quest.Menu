@@ -78,6 +78,7 @@ let buttonPressedColor: [number, number, number, number] = [0.333, 0.150, 0.0, 1
 let menuName: string = "ii's <b>Stupid</b> Menu";
 let themeIndex = 0;
 let buttonIndex = 0;
+let favoriteColor = 2;
 
 let currentNotification: string = "";
 let notifactionResetTime: number = 0;
@@ -410,7 +411,12 @@ Il2Cpp.perform(() => {
             if (buttonData.buttonText != "Exit Favorite Mods")
                 favorited.push(buttonData.buttonText);
         });
-        const favTextColor: [number, number, number, number] = [Math.max(textColor[0] + 0.1, 1), Math.max(textColor[1] + 0.1, 1), Math.min(textColor[2] - 0.1, 0), textColor[3]]
+        const favTextColor: [number, number, number, number] = [
+            Math.max( Math.min(textColor[0] + (favoriteColor == 0 ? (+1.0) : 0.2), 1), 0 ),
+            Math.max( Math.min(textColor[1] + (favoriteColor == 1 ? (-0.1) : (favoriteColor == 0 ? (-0.1) : 0.2)), 1), 0 ),
+            Math.max( Math.min(textColor[2] + (favoriteColor == 2 ? (-0.1) : (favoriteColor == 0 ? (-0.2) : 0.2)), 1), 0 ),
+            Math.max( Math.min(textColor[3] + (favoriteColor == 3 ? (-0.7) : 0.0), 1), 0 )
+        ]
         
         targetMods.forEach((buttonData, index) => {
             const button = createObject([0.105, 0, 0.13 - (i * 0.04)], identityQuaternion, [0.09, 0.9, 0.08], 3, buttonColor, getTransform(menu));
@@ -955,6 +961,15 @@ Il2Cpp.perform(() => {
                 },
                 isTogglable: false,
                 toolTip: "Changes the button sound."
+            }),
+            new ButtonInfo({
+                buttonText: "Change Favorite Color",
+                method: () => {
+                    favoriteColor++;
+                    favoriteColor %= 4;
+                },
+                isTogglable: false,
+                toolTip: "Changes the text color of favorite mods."
             }),
             new ButtonInfo({
                 buttonText: "Change Menu Scale",
