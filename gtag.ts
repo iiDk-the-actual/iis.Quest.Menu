@@ -2497,12 +2497,19 @@ Il2Cpp.perform(() => {
             }
         }
 
+        let modCount = 0;
+        buttons.forEach(category => {
+            modCount += category.length;
+        }); 
+
         const motdTitle = getComponent(getObject("Environment Objects/LocalObjects_Prefab/TreeRoom/motdHeadingText"), TextMeshPro);
         motdTitle.method("set_text").invoke(Il2Cpp.string("Thanks for using ii's Stupid Menu!"));
 
         const motdText = getComponent(getObject("Environment Objects/LocalObjects_Prefab/TreeRoom/motdBodyText"), TextMeshPro);
         motdText.method("set_fontSize").invoke(100);
-        motdText.method("set_text").invoke(Il2Cpp.string(`You are currently using build ${version}. Thank you for supporting me on Patreon, it means a lot! This menu runs completely standalone. I, iiDk, am not responsible for any bans using this menu. If you get banned while using this, it's your responsibility.`));
+        motdText.method("set_text").invoke(Il2Cpp.string(
+`You are currently using build ${version}. This menu was created by iiDk (@crimsoncauldron) on Discord. There are a total of <b>${modCount}</b> mods on this menu. This menu runs completely standalone. <color=red>I, iiDk, am not responsible for any bans using this menu.</color> If you get banned while using this, it's your responsibility.`
+));
     }
 
     const LateUpdate = GTPlayer.method("LateUpdate");
