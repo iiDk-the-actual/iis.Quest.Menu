@@ -2162,10 +2162,11 @@ Il2Cpp.perform(() => {
                     }
                 },
                 method: () => {
-                    if (frameCount % 5 != 0) {
+                    if (frameCount % 3 == 0) {
                         for (let line of linePool) {
                             line.method("get_gameObject").invoke().method("SetActive").invoke(false);
                         }
+                        const rhp = rightHandTransform.method("get_position").invoke();
                         const vrrigs = GorillaParent.field("vrrigs").value;
                         const vrrigtotal = vrrigs.method("get_Count").invoke();
                         for (let i = 0; i < vrrigtotal; i++) {
@@ -2179,8 +2180,9 @@ Il2Cpp.perform(() => {
                                 let nl = false;
                                 for (let line of linePool) {
                                     if (finalRender != null) continue;
-                                    if (line.method("get_gameObject").invoke().method("get_activeInHierarchy").invoke() == false) {
-                                        line.method("get_gameObject").invoke().method("SetActive").invoke(true);
+                                    const lineObj = line.method("get_gameObject").invoke();
+                                    if (lineObj.method("get_activeInHierarchy").invoke() == false) {
+                                        lineObj.method("SetActive").invoke(true);
                                         finalRender = line;
                                         break;
                                     }
@@ -2202,8 +2204,9 @@ Il2Cpp.perform(() => {
                                 }
                                 finalRender.method("set_startColor").invoke(color);
                                 finalRender.method("set_endColor").invoke(color);
-                                finalRender.method("SetPosition").invoke(1, getTransform(playerRig).method("get_position").invoke());
-                                finalRender.method("SetPosition").invoke(0, rightHandTransform.method("get_position").invoke());
+                                finalRender.method("SetPosition").invoke(0, rhp);
+                                if (frameCount % 6 == 0)
+                                    finalRender.method("SetPosition").invoke(1, getTransform(playerRig).method("get_position").invoke());
                             }
                         }
                     }
