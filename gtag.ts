@@ -2162,10 +2162,11 @@ Il2Cpp.perform(() => {
                     }
                 },
                 method: () => {
-                    if (frameCount % 5 != 0) {
+                    if (frameCount % 3 == 0) {
                         for (let line of linePool) {
                             line.method("get_gameObject").invoke().method("SetActive").invoke(false);
                         }
+                        const rhp = rightHandTransform.method("get_position").invoke();
                         const vrrigs = GorillaParent.field("vrrigs").value;
                         const vrrigtotal = vrrigs.method("get_Count").invoke();
                         for (let i = 0; i < vrrigtotal; i++) {
@@ -2179,8 +2180,9 @@ Il2Cpp.perform(() => {
                                 let nl = false;
                                 for (let line of linePool) {
                                     if (finalRender != null) continue;
-                                    if (line.method("get_gameObject").invoke().method("get_activeInHierarchy").invoke() == false) {
-                                        line.method("get_gameObject").invoke().method("SetActive").invoke(true);
+                                    const lineObj = line.method("get_gameObject").invoke();
+                                    if (lineObj.method("get_activeInHierarchy").invoke() == false) {
+                                        lineObj.method("SetActive").invoke(true);
                                         finalRender = line;
                                         break;
                                     }
@@ -2202,8 +2204,9 @@ Il2Cpp.perform(() => {
                                 }
                                 finalRender.method("set_startColor").invoke(color);
                                 finalRender.method("set_endColor").invoke(color);
-                                finalRender.method("SetPosition").invoke(1, getTransform(playerRig).method("get_position").invoke());
-                                finalRender.method("SetPosition").invoke(0, rightHandTransform.method("get_position").invoke());
+                                finalRender.method("SetPosition").invoke(0, rhp);
+                                if (frameCount % 6 == 0)
+                                    finalRender.method("SetPosition").invoke(1, getTransform(playerRig).method("get_position").invoke());
                             }
                         }
                     }
@@ -2281,6 +2284,60 @@ Il2Cpp.perform(() => {
                 },
                 isTogglable: true,
                 toolTip: "Puts tracers on your right hand. Shows only the nearest player to reduce lag."
+            }),
+            
+            new ButtonInfo({
+                buttonText: "Casual ESP",
+                disableMethod: () => {
+                    for (let line of linePool) {
+                        line.method("get_gameObject").invoke().method("SetActive").invoke(false);
+                    }
+                },
+                method: () => {
+                    if (frameCount % 3 == 0) {
+                        for (let line of linePool) {
+                            line.method("get_gameObject").invoke().method("SetActive").invoke(false);
+                        }
+                        const rhp = rightHandTransform.method("get_position").invoke();
+                        const vrrigs = GorillaParent.field("vrrigs").value;
+                        const vrrigtotal = vrrigs.method("get_Count").invoke();
+                        for (let i = 0; i < vrrigtotal; i++) {
+                            const playerRig = vrrigs.method("get_Item").invoke(i);
+                            if (!playerIsLocal(playerRig)) {
+                                const color = playerRig.field("playerColor").value;
+                                if (lineRenderHolder == null) {
+                                    lineRenderHolder = GameObject.new("LineRender_Holder");
+                                }
+                                let finalRender = null;
+                                let nl = false;
+                                for (let line of linePool) {
+                                    if (finalRender != null) continue;
+                                    const lineObj = line;
+                                    if (lineObj.method("get_activeInHierarchy").invoke() == false) {
+                                        lineObj.method("SetActive").invoke(true);
+                                        finalRender = line;
+                                        break;
+                                    }
+                                }
+                                if (finalRender == null) {
+                                    nl = true;
+                                    const lineHolder = GameObject.method("CreatePrimitive").invoke(3);
+                                    getTransform(lineHolder).method("set_parent").invoke(getTransform(lineRenderHolder));
+                                    Destroy(getComponent(lineHolder, BoxCollider));
+                                    getTransform(lineHolder).method("set_localScale").invoke([0.2, 0.2, 0.2]);
+                                    const shader = Shader.method("Find").overload("System.String").invoke(Il2Cpp.string("GUI/Text Shader"));
+                                    getComponent(lineHolder, Renderer).method("get_material").invoke().method("set_shader").invoke(shader);
+                                    linePool.push(lineHolder);
+                                    finalRender = lineHolder;
+                                }
+                                getComponent(finalRender, Renderer).method("get_material").invoke().method("set_color").invoke(color);
+                                getTransform(finalRender).method("set_position").invoke(getTransform(playerRig).method("get_position").invoke());
+                            }
+                        }
+                    }
+                },
+                isTogglable: true,
+                toolTip: "Puts tracers on your right hand. Shows everyone."
             }),
         ],
         [ // Overpowered Mods [9]
