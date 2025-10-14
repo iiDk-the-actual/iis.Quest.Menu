@@ -69,6 +69,8 @@ let enabledRecent: boolean = false;
 
 let highPunchPower = false;
 
+let espCollide = false;
+
 let bgColor: [number, number, number, number] = [1.0, 0.5, 0.0, 1.0];
 let textColor: [number, number, number, number] = [1.0, 0.7450981, 0.4901961, 1.0];
 
@@ -137,6 +139,8 @@ Il2Cpp.perform(() => {
 
     const MeshCollider = UnityEnginePhysics.class("UnityEngine.MeshCollider");
     const BoxCollider = UnityEnginePhysics.class("UnityEngine.BoxCollider");
+    const SphereCollider = UnityEnginePhysics.class("UnityEngine.SphereCollider");
+    const CapsuleCollider = UnityEnginePhysics.class("UnityEngine.CapsuleCollider");
     const Collider = UnityEnginePhysics.class("UnityEngine.Collider");
     const Rigidbody = UnityEnginePhysics.class("UnityEngine.Rigidbody");
     const Physics = UnityEnginePhysics.class("UnityEngine.Physics");
@@ -1030,6 +1034,24 @@ Il2Cpp.perform(() => {
                 enableMethod: () => highPunchPower = true,
                 disableMethod: () => highPunchPower = false,
                 toolTip: "Makes punch mod more powerful."
+            }),
+            new ButtonInfo({
+                buttonText: "ESP Collisions",
+                enableMethod: () => {
+                    for (let line of linePool) {
+                        Destroy(line.method("get_gameObject").invoke());
+                    }
+                    linePool = [];
+                    espCollide = true
+                },
+                disableMethod: () => {
+                    for (let line of linePool) {
+                        Destroy(line.method("get_gameObject").invoke());
+                    }
+                    linePool = [];
+                    espCollide = false
+                },
+                toolTip: "Makes ESP have collisions."
             }),
         ],
 
@@ -2287,11 +2309,12 @@ Il2Cpp.perform(() => {
             }),
             
             new ButtonInfo({
-                buttonText: "Casual ESP",
+                buttonText: "Casual Cube ESP",
                 disableMethod: () => {
                     for (let line of linePool) {
-                        line.method("get_gameObject").invoke().method("SetActive").invoke(false);
+                        Destroy(line.method("get_gameObject").invoke());
                     }
+                    linePool = [];
                 },
                 method: () => {
                     if (frameCount % 3 == 0) {
@@ -2327,6 +2350,8 @@ Il2Cpp.perform(() => {
                                     getTransform(lineHolder).method("set_localScale").invoke([0.2, 0.2, 0.2]);
                                     const shader = Shader.method("Find").overload("System.String").invoke(Il2Cpp.string("GUI/Text Shader"));
                                     getComponent(lineHolder, Renderer).method("get_material").invoke().method("set_shader").invoke(shader);
+                                    if (!espCollide)
+                                        Destroy(getComponent(lineHolder, BoxCollider));
                                     linePool.push(lineHolder);
                                     finalRender = lineHolder;
                                 }
@@ -2337,7 +2362,178 @@ Il2Cpp.perform(() => {
                     }
                 },
                 isTogglable: true,
-                toolTip: "Puts tracers on your right hand. Shows everyone."
+                toolTip: "Puts cubes on everyone."
+            }),
+            
+            new ButtonInfo({
+                buttonText: "Casual Cuboid ESP",
+                disableMethod: () => {
+                    for (let line of linePool) {
+                        Destroy(line.method("get_gameObject").invoke());
+                    }
+                    linePool = [];
+                },
+                method: () => {
+                    if (frameCount % 3 == 0) {
+                        for (let line of linePool) {
+                            line.method("get_gameObject").invoke().method("SetActive").invoke(false);
+                        }
+                        const rhp = rightHandTransform.method("get_position").invoke();
+                        const vrrigs = GorillaParent.field("vrrigs").value;
+                        const vrrigtotal = vrrigs.method("get_Count").invoke();
+                        for (let i = 0; i < vrrigtotal; i++) {
+                            const playerRig = vrrigs.method("get_Item").invoke(i);
+                            if (!playerIsLocal(playerRig)) {
+                                const color = playerRig.field("playerColor").value;
+                                if (lineRenderHolder == null) {
+                                    lineRenderHolder = GameObject.new("LineRender_Holder");
+                                }
+                                let finalRender = null;
+                                let nl = false;
+                                for (let line of linePool) {
+                                    if (finalRender != null) continue;
+                                    const lineObj = line;
+                                    if (lineObj.method("get_activeInHierarchy").invoke() == false) {
+                                        lineObj.method("SetActive").invoke(true);
+                                        finalRender = line;
+                                        break;
+                                    }
+                                }
+                                if (finalRender == null) {
+                                    nl = true;
+                                    const lineHolder = GameObject.method("CreatePrimitive").invoke(3);
+                                    getTransform(lineHolder).method("set_parent").invoke(getTransform(lineRenderHolder));
+                                    Destroy(getComponent(lineHolder, BoxCollider));
+                                    getTransform(lineHolder).method("set_localScale").invoke([0.2, 0.4, 0.2]);
+                                    const shader = Shader.method("Find").overload("System.String").invoke(Il2Cpp.string("GUI/Text Shader"));
+                                    getComponent(lineHolder, Renderer).method("get_material").invoke().method("set_shader").invoke(shader);
+                                    if (!espCollide)
+                                        Destroy(getComponent(lineHolder, BoxCollider));
+                                    linePool.push(lineHolder);
+                                    finalRender = lineHolder;
+                                }
+                                getComponent(finalRender, Renderer).method("get_material").invoke().method("set_color").invoke(color);
+                                getTransform(finalRender).method("set_position").invoke(getTransform(playerRig).method("get_position").invoke());
+                            }
+                        }
+                    }
+                },
+                isTogglable: true,
+                toolTip: "Puts cuboids on everyone."
+            }),
+            
+            new ButtonInfo({
+                buttonText: "Casual Sphere ESP",
+                disableMethod: () => {
+                    for (let line of linePool) {
+                        Destroy(line.method("get_gameObject").invoke());
+                    }
+                    linePool = [];
+                },
+                method: () => {
+                    if (frameCount % 3 == 0) {
+                        for (let line of linePool) {
+                            line.method("get_gameObject").invoke().method("SetActive").invoke(false);
+                        }
+                        const rhp = rightHandTransform.method("get_position").invoke();
+                        const vrrigs = GorillaParent.field("vrrigs").value;
+                        const vrrigtotal = vrrigs.method("get_Count").invoke();
+                        for (let i = 0; i < vrrigtotal; i++) {
+                            const playerRig = vrrigs.method("get_Item").invoke(i);
+                            if (!playerIsLocal(playerRig)) {
+                                const color = playerRig.field("playerColor").value;
+                                if (lineRenderHolder == null) {
+                                    lineRenderHolder = GameObject.new("LineRender_Holder");
+                                }
+                                let finalRender = null;
+                                let nl = false;
+                                for (let line of linePool) {
+                                    if (finalRender != null) continue;
+                                    const lineObj = line;
+                                    if (lineObj.method("get_activeInHierarchy").invoke() == false) {
+                                        lineObj.method("SetActive").invoke(true);
+                                        finalRender = line;
+                                        break;
+                                    }
+                                }
+                                if (finalRender == null) {
+                                    nl = true;
+                                    const lineHolder = GameObject.method("CreatePrimitive").invoke(0);
+                                    getTransform(lineHolder).method("set_parent").invoke(getTransform(lineRenderHolder));
+                                    Destroy(getComponent(lineHolder, BoxCollider));
+                                    getTransform(lineHolder).method("set_localScale").invoke([0.2, 0.2, 0.2]);
+                                    const shader = Shader.method("Find").overload("System.String").invoke(Il2Cpp.string("GUI/Text Shader"));
+                                    getComponent(lineHolder, Renderer).method("get_material").invoke().method("set_shader").invoke(shader);
+                                    if (!espCollide)
+                                        Destroy(getComponent(lineHolder, SphereCollider));
+                                    linePool.push(lineHolder);
+                                    finalRender = lineHolder;
+                                }
+                                getComponent(finalRender, Renderer).method("get_material").invoke().method("set_color").invoke(color);
+                                getTransform(finalRender).method("set_position").invoke(getTransform(playerRig).method("get_position").invoke());
+                            }
+                        }
+                    }
+                },
+                isTogglable: true,
+                toolTip: "Puts spheres on everyone."
+            }),
+            
+            new ButtonInfo({
+                buttonText: "Casual Capsule ESP",
+                disableMethod: () => {
+                    for (let line of linePool) {
+                        Destroy(line.method("get_gameObject").invoke());
+                    }
+                    linePool = [];
+                },
+                method: () => {
+                    if (frameCount % 3 == 0) {
+                        for (let line of linePool) {
+                            line.method("get_gameObject").invoke().method("SetActive").invoke(false);
+                        }
+                        const rhp = rightHandTransform.method("get_position").invoke();
+                        const vrrigs = GorillaParent.field("vrrigs").value;
+                        const vrrigtotal = vrrigs.method("get_Count").invoke();
+                        for (let i = 0; i < vrrigtotal; i++) {
+                            const playerRig = vrrigs.method("get_Item").invoke(i);
+                            if (!playerIsLocal(playerRig)) {
+                                const color = playerRig.field("playerColor").value;
+                                if (lineRenderHolder == null) {
+                                    lineRenderHolder = GameObject.new("LineRender_Holder");
+                                }
+                                let finalRender = null;
+                                let nl = false;
+                                for (let line of linePool) {
+                                    if (finalRender != null) continue;
+                                    const lineObj = line;
+                                    if (lineObj.method("get_activeInHierarchy").invoke() == false) {
+                                        lineObj.method("SetActive").invoke(true);
+                                        finalRender = line;
+                                        break;
+                                    }
+                                }
+                                if (finalRender == null) {
+                                    nl = true;
+                                    const lineHolder = GameObject.method("CreatePrimitive").invoke(1);
+                                    getTransform(lineHolder).method("set_parent").invoke(getTransform(lineRenderHolder));
+                                    Destroy(getComponent(lineHolder, BoxCollider));
+                                    getTransform(lineHolder).method("set_localScale").invoke([0.27, 0.4, 0.27]);
+                                    const shader = Shader.method("Find").overload("System.String").invoke(Il2Cpp.string("GUI/Text Shader"));
+                                    getComponent(lineHolder, Renderer).method("get_material").invoke().method("set_shader").invoke(shader);
+                                    if (!espCollide)
+                                        Destroy(getComponent(lineHolder, CapsuleCollider));
+                                    linePool.push(lineHolder);
+                                    finalRender = lineHolder;
+                                }
+                                getComponent(finalRender, Renderer).method("get_material").invoke().method("set_color").invoke(color);
+                                getTransform(finalRender).method("set_position").invoke(getTransform(playerRig).method("get_position").invoke());
+                            }
+                        }
+                    }
+                },
+                isTogglable: true,
+                toolTip: "Puts capsules on everyone."
             }),
         ],
         [ // Overpowered Mods [9]
