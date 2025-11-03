@@ -1210,7 +1210,7 @@ Il2Cpp.perform(() => {
                         rigidbody.method("set_velocity").invoke(Vector3.field("zeroVector").value);
 
                         const transform = getTransform(GorillaTagger);
-                        const vrot = Quaternion.method("op_Multiply", 2).invoke(rightHandTransform.method("get_rotation").invoke(), GTPlayer.field("rightHandRotOffset").value);
+                        const vrot = Quaternion.method("op_Multiply", 2).invoke(rightHandTransform.method("get_rotation").invoke(), GTPlayer.field("rightHand").field("handRotOffset").value);
                         const vfor = Vector3.method("get_forward").invoke();
                         let forward = mulQV.invoke(vrot, vfor);
 
