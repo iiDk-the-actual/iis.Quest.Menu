@@ -5,7 +5,7 @@ declare const Il2Cpp: any;
 declare const console: any;
 declare const XRNode: any;
 
-const version = "1.4.0";
+const version = "1.4.1";
 let boardMaterial = null;
 let buttonClickDelay = 0.0;
 let menu = null;
@@ -2739,7 +2739,7 @@ Il2Cpp.perform(() => {
             const gameObject = child.method("get_gameObject").invoke();
             if (gameObject.method("get_name").invoke().toString().includes("UnityTempFile")) {
                 boardIndex++;
-                if (boardIndex == 5) {
+                if (boardIndex == 6) {
                     boardMaterial = Material.new();
                     Material.method("CreateWithShader").invoke(boardMaterial, UberShader);
 
