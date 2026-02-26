@@ -110,7 +110,7 @@ Il2Cpp.perform(() => {
     const GorillaTaggerClass = AssemblyCSharp.class("GorillaTagger");
     const GTPlayerClass = AssemblyCSharp.class("GorillaLocomotion.GTPlayer");
     const VRRig = AssemblyCSharp.class("VRRig");
-    const GorillaNot = AssemblyCSharp.class("GorillaNot");
+    const MonkeAgent = AssemblyCSharp.class("MonkeAgent");
     const GorillaParentClass = AssemblyCSharp.class("GorillaParent");
     const NetworkSystemClass = AssemblyCSharp.class("NetworkSystem");
     const GorillaReportButton = AssemblyCSharp.class("GorillaReportButton");
@@ -157,7 +157,7 @@ Il2Cpp.perform(() => {
 
     const GorillaTagger = GorillaTaggerClass.field("_instance").value;
     const GorillaParent = GorillaParentClass.field("instance").value;
-    const GorillaNotInst = GorillaNot.field("instance").value;
+    const MonkeAgentInst = MonkeAgent.field("instance").value;
     const NetworkSystem = NetworkSystemClass.field("Instance").value;
     const rigidbody = GorillaTagger.field("<rigidbody>k__BackingField").value;
 
@@ -273,9 +273,9 @@ Il2Cpp.perform(() => {
     }
 
     function sendAllOutgoing() {
-        GorillaNotInst.field("rpcErrorMax").value = Number.MAX_SAFE_INTEGER;
-        GorillaNotInst.field("rpcCallLimit").value = Number.MAX_SAFE_INTEGER;
-        GorillaNotInst.field("logErrorMax").value = Number.MAX_SAFE_INTEGER;
+        MonkeAgentInst.field("rpcErrorMax").value = Number.MAX_SAFE_INTEGER;
+        MonkeAgentInst.field("rpcCallLimit").value = Number.MAX_SAFE_INTEGER;
+        MonkeAgentInst.field("logErrorMax").value = Number.MAX_SAFE_INTEGER;
         PhotonNetwork.method("set_MaxResendsBeforeDisconnect").invoke(Number.MAX_SAFE_INTEGER);
         PhotonNetwork.method("set_QuickResends").invoke(Number.MAX_SAFE_INTEGER);
         PhotonNetwork.method("SendAllOutgoingCommands").invoke();
@@ -2723,7 +2723,7 @@ Il2Cpp.perform(() => {
         return this.method("OnDisable").invoke();
     };
 
-    const SendReport = GorillaNot.method("SendReport");
+    const SendReport = MonkeAgent.method("SendReport");
     SendReport.implementation = function () {
         return;
     }
